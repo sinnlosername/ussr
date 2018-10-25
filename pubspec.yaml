@@ -1,0 +1,20 @@
+name: screenserver
+description: A sample command-line application.
+# version: 1.0.0
+# homepage: https://www.example.com
+# author: Florian <email@example.com>
+
+environment:
+  sdk: '>=2.0.0 <3.0.0'
+
+dependencies:
+  safe_config: '>=2.0.1'
+  mongo_dart: '>= 0.3.3'
+  uri: '>= 0.11.3+1'
+  hex: '>= 0.1.2'
+  intl: '>= 0.15.7'
+  mime: '>= 0.9.6+2'
+  console: '>= 3.0.0'
+
+dev_dependencies:
+  test: ^1.0.0
