@@ -1,8 +1,8 @@
 name: screenserver
 description: A sample command-line application.
-# version: 1.0.0
-# homepage: https://www.example.com
-# author: Florian <email@example.com>
+version: 1.0.0
+homepage: https://florian.ws
+author: Florian <me@florian.ws>
 
 environment:
   sdk: '>=2.0.0 <3.0.0'
