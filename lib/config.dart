@@ -32,7 +32,7 @@ class ScreenConfig extends Configuration {
   String dataDir = "data"; //Subdirectory of homeDir
 
   @optionalConfiguration
-  String mongoUrl = "mongodb://localhost:27017/screenserver";
+  String mongoUrl = "mongodb://localhost:27017/ussr";
 
   @optionalConfiguration
   int sizeLimit = 1024 * 1024 * 3;
