@@ -32,10 +32,7 @@ void start(bool iscli) async {
   }
 
   HttpServer.bind(config.host, config.port).then((server) {
-    server.listen(onRequest, onError: (_, s) {
-      print("Error while handling http request");
-      print(s);
-    });
+    server.listen(onRequest);
   }, onError: (e) {
     print("Unable to start http server");
     print(e);

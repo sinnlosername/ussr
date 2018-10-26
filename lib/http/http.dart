@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:mongo_dart/mongo_dart.dart';
-import 'package:path/path.dart' as path;
-import '../util.dart';
-import '../screenserver.dart' as ss;
+
 import 'package:hex/hex.dart';
 import 'package:intl/intl.dart';
+import 'package:mongo_dart/mongo_dart.dart';
+import 'package:path/path.dart' as path;
+
+import '../screenserver.dart' as ss;
+import '../util.dart';
 import 'processors.dart';
 
 final requestRegex = RegExp("^\\/[\\+-]?[A-Za-z0-9]{1,${ss.config.nameSize}}(\\.png)?(\\/[a-fA-F0-9]{32})?\$");
@@ -13,7 +15,16 @@ final keyRegex = RegExp(r"[a-fA-F0-9]{32}");
 final dateFormat = new DateFormat('dd.MM.yyyy HH:mm:ss');
 
 void onRequest(HttpRequest req) async {
-  print("Request (${req.connectionInfo.remoteAddress.address}): ${req.uri.path}"); //TODO Real IP
+  try {
+    await _onRequest(req);
+  } catch (e) {
+    print("Error while handling http request");
+    print(e);
+  }
+}
+
+void _onRequest(HttpRequest req) async {
+  print("Request (${getRealIP(req)}): ${req.uri.path}"); //TODO Real IP
 
   if (req.uri.path == "/" || req.uri.path == "") {
     req.response
@@ -57,7 +68,7 @@ void onRequest(HttpRequest req) async {
       req.response.headers.set("Content-Type", "image/png");
       await file.openRead().pipe(req.response);
       req.response.close();
-      return print("Request (${req.connectionInfo.remoteAddress.address}) - View: $origName");
+      return print("Request (${getRealIP(req)}) - View: $origName");
     }
 
     return await handleAction(action, req, name, file, true);
@@ -113,7 +124,7 @@ void handleUpload(HttpRequest req) async {
   dbimage.save(true);
 
   jsonResponse(req, HttpStatus.ok, makeInfoMap(dbimage, file.path.split("/").last));
-  print("Request (${req.connectionInfo.remoteAddress.address}) - "
+  print("Request (${getRealIP(req)}) - "
       "User '${user.name}' uploaded '$name' (${data.length}B) using '$processorName'");
 }
 
@@ -136,12 +147,12 @@ void handleAction(RequestAction action, HttpRequest req, String fileName, File f
       ..deletionDate = DateTime.now().toUtc()
       ..save(false);
 
-    print("Request (${req.connectionInfo.remoteAddress.address}) - Deleted: ${dbimage.name}");
+    print("Request (${getRealIP(req)}) - Deleted: ${dbimage.name}");
     return jsonResponse(req, HttpStatus.ok, {"info": "Picture with id ${dbimage.name} was deleted"});
   }
 
   if (action == RequestAction.INFO) {
-    print("Request (${req.connectionInfo.remoteAddress.address}) - Info: ${dbimage.name}");
+    print("Request (${getRealIP(req)}) - Info: ${dbimage.name}");
     return jsonResponse(req, HttpStatus.ok, makeInfoMap(dbimage, fileName));
   }
 }
@@ -158,6 +169,19 @@ Map<String, dynamic> makeInfoMap(ss.DatabaseImage dbimage, String fileName) {
     "creationDate": dateFormat.format(dbimage.creationDate.toLocal()),
     "deletionDate": dbimage.deletionDate == null ? null : dateFormat.format(dbimage.deletionDate.toLocal()),
   };
+}
+
+String getRealIP(HttpRequest req) {
+  String ip = req.connectionInfo?.remoteAddress?.address;
+
+  if (ip == null)
+    ip = "unresolveable";
+
+  ip = req.headers["X-Forward-For"] != null ? req.headers["X-Forward-For"] : ip;
+  ip = req.headers["X-Real-IP"] != null ? req.headers["X-Real-IP"] : ip;
+  ip = req.headers["CF-Connecting-IP"] != null ? req.headers["CF-Connecting-IP"] : ip;
+
+  return ip;
 }
 
 void handleIndex(HttpRequest req) {
@@ -235,7 +259,7 @@ void jsonResponse(HttpRequest req, int status, Map<String, dynamic> map) {
 }
 
 void errorResponse(HttpRequest req, int status, String error) {
-  print("Request (${req.connectionInfo.remoteAddress.address}) - Error: $error");
+  print("Request (${getRealIP(req)}) - Error: $error");
   jsonResponse(req, status, {"error": error});
 }
 
