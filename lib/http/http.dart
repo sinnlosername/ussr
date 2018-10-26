@@ -178,9 +178,9 @@ String getRealIP(HttpRequest req) {
   if (ip == null)
     ip = "unresolveable";
 
-  ip = req.headers["X-Forward-For"] != null ? req.headers["X-Forward-For"] : ip;
-  ip = req.headers["X-Real-IP"] != null ? req.headers["X-Real-IP"] : ip;
-  ip = req.headers["CF-Connecting-IP"] != null ? req.headers["CF-Connecting-IP"] : ip;
+  ip = req.headers.value("X-Forward-For") != null ? req.headers.value("X-Forward-For") : ip;
+  ip = req.headers.value("X-Real-IP") != null ? req.headers.value("X-Real-IP") : ip;
+  ip = req.headers.value("CF-Connecting-IP") != null ? req.headers.value("CF-Connecting-IP") : ip;
 
   return ip;
 }
