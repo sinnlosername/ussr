@@ -17,14 +17,15 @@ final dateFormat = new DateFormat('dd.MM.yyyy HH:mm:ss');
 void onRequest(HttpRequest req) async {
   try {
     await _onRequest(req);
-  } catch (e) {
+  } catch (e, st) {
     print("Error while handling http request");
     print(e);
+    print(st.toString());
   }
 }
 
 void _onRequest(HttpRequest req) async {
-  print("Request (${getRealIP(req)}): ${req.uri.path}"); //TODO Real IP
+  print("Request (${getRealIP(req)}): ${req.uri.path}");
 
   if (req.uri.path == "/" || req.uri.path == "") {
     req.response
