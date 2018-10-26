@@ -3,9 +3,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:mongo_dart/mongo_dart.dart';
-import "package:screenserver/http/http.dart";
 
 import "config.dart";
+import "http/http.dart";
 import "util.dart" as util;
 
 final JsonEncoder jsonEncoder = new JsonEncoder.withIndent('  ');

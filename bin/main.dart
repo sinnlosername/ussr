@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import "package:screenserver/cli.dart" as cli;
-import 'package:screenserver/screenserver.dart' as screenserver;
+import "package:ussr/cli.dart" as cli;
+import 'package:ussr/screenserver.dart' as screenserver;
 
 main(List<String> arguments) async {
   bool isCli = !arguments.isEmpty && arguments.elementAt(0) == "cli";
