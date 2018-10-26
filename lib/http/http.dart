@@ -150,7 +150,7 @@ Map<String, dynamic> makeInfoMap(ss.DatabaseImage dbimage, String fileName) {
     "size": dbimage.size,
     "sizeKb": "${dbimage.size / 1000} KB",
     "key": HEX.encode(dbimage.key.byteList),
-    "uploader": dbimage.processor,
+    "processor": dbimage.processor,
     "creationDate": dateFormat.format(dbimage.creationDate.toLocal()),
     "deletionDate": dbimage.deletionDate == null ? null : dateFormat.format(dbimage.deletionDate.toLocal()),
   };
