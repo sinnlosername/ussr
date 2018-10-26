@@ -1,3 +1,8 @@
 host: 127.0.0.1
 port: 8075
-workDir: C:\Users\Florian\WebstormProjects\screenserver
+workDir: /your/work/dir
+#dataDir: data
+#mongoUrl: "mongodb://localhost:27017/ussr"
+#sizeLimit: 3145728
+#nameSize: 4
+
