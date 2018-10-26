@@ -10,9 +10,9 @@ void start() async {
   while (true) {
     try {
       var line = stdin.readLineSync();
-      _onData(line);
+      await _onData(line);
     } catch (e) {
-      _onError(e);
+      await _onError(e);
     }
   }
 }
@@ -27,6 +27,7 @@ void _onData(String line) async {
     if (await ss.DatabaseUser.load("name", args[1]) != null)
       return print("User already exists");
 
+    print("Creating user");
     var dbimage = ss.DatabaseUser();
 
     dbimage.name = args[1];
