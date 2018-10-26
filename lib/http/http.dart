@@ -107,31 +107,23 @@ void handleUpload(HttpRequest req) async {
     return errorResponse(req, HttpStatus.badRequest, "Image must be a png file");
 
   var file = ss.findNextFile();
-  var name = file.path
-      .substring(0, file.path.length - 4)
-      .split("/")
-      .last;
+  var name = file.path.substring(0, file.path.length - 4).split("/").last;
   var dbimage = ss.DatabaseImage();
 
   if (name.contains("/") || name.contains("\\")) throw new Exception("path err critical");
 
   file.writeAsBytes(data);
 
-  var length = await file.length();
-
   dbimage.name = name;
   dbimage.owner = user.name;
   dbimage.processor = processorName;
   dbimage.key = new BsonBinary.from(nextBytes(16));
   dbimage.creationDate = DateTime.now().toUtc();
-  dbimage.size = length;
+  dbimage.size = data.length;
   dbimage.save(true);
 
-  print("Request (${getRealIP(req)}) - "
-      "User '${user.name}' uploaded '$name' (${length}B) using '$processorName'");
-  return jsonResponse(req, HttpStatus.ok, makeInfoMap(dbimage, file.path
-      .split("/")
-      .last));
+  print("Request (${getRealIP(req)}) - User '${user.name}' uploaded '$name' (${data.length}B) using '$processorName'");
+  return jsonResponse(req, HttpStatus.ok, makeInfoMap(dbimage, file.path.split("/").last));
 }
 
 void handleAction(RequestAction action, HttpRequest req, String fileName, File file, bool exists) async {
@@ -169,7 +161,7 @@ Map<String, dynamic> makeInfoMap(ss.DatabaseImage dbimage, String fileName) {
     "file": fileName,
     "owner": dbimage.owner,
     "size": dbimage.size,
-    "sizeKb": "${dbimage.size / 1000} KB",
+    "sizeKB": "${dbimage.size / 1000}",
     "key": HEX.encode(dbimage.key.byteList),
     "processor": dbimage.processor,
     "creationDate": dateFormat.format(dbimage.creationDate.toLocal()),
