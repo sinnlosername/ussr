@@ -13,7 +13,7 @@ final keyRegex = RegExp(r"[a-fA-F0-9]{32}");
 final dateFormat = new DateFormat('dd.MM.yyyy HH:mm:ss');
 
 void onRequest(HttpRequest req) async {
-  print("Request (${req.connectionInfo.remoteAddress.address}): ${req.uri.path}");
+  print("Request (${req.connectionInfo.remoteAddress.address}): ${req.uri.path}"); //TODO Real IP
 
   if (req.uri.path == "") {
     req.response
@@ -29,6 +29,7 @@ void onRequest(HttpRequest req) async {
 
   if (requestRegex.firstMatch(uripath) != null) {
     String name = req.uri.pathSegments.first;
+    String origName = name;
     RequestAction action = getAction(name);
 
     if (action != RequestAction.VIEW) {
@@ -56,7 +57,7 @@ void onRequest(HttpRequest req) async {
       req.response.headers.set("Content-Type", "image/png");
       await file.openRead().pipe(req.response);
       req.response.close();
-      return;
+      return print("Request (${req.connectionInfo.remoteAddress.address}) - View: $origName");
     }
 
     return await handleAction(action, req, name, file, true);
@@ -88,11 +89,9 @@ void handleUpload(HttpRequest req) async {
 
   var data = await processor.extractData(req);
 
-  if (data == null)
-    return errorResponse(req, 422, "Unable to process image");
+  if (data == null) return errorResponse(req, 422, "Unable to process image");
 
-  if (!isPNGSimple(data))
-    return errorResponse(req, HttpStatus.badRequest, "Image must be a png file");
+  if (!isPNGSimple(data)) return errorResponse(req, HttpStatus.badRequest, "Image must be a png file");
 
   var file = ss.findNextFile();
   var name = file.path.substring(0, file.path.length - 4).split("/").last;
@@ -111,6 +110,8 @@ void handleUpload(HttpRequest req) async {
   dbimage.save(true);
 
   jsonResponse(req, HttpStatus.ok, makeInfoMap(dbimage, file.path.split("/").last));
+  print("Request (${req.connectionInfo.remoteAddress.address}) - "
+      "User '${user.name}' uploaded '$name' (${data.length}B) using '$processorName'");
 }
 
 void handleAction(RequestAction action, HttpRequest req, String fileName, File file, bool exists) async {
@@ -131,10 +132,12 @@ void handleAction(RequestAction action, HttpRequest req, String fileName, File f
       ..deletionDate = DateTime.now().toUtc()
       ..save(false);
 
+    print("Request (${req.connectionInfo.remoteAddress.address}) - Deleted: ${dbimage.name}");
     return jsonResponse(req, HttpStatus.ok, {"info": "Picture with id ${dbimage.name} was deleted"});
   }
 
   if (action == RequestAction.INFO) {
+    print("Request (${req.connectionInfo.remoteAddress.address}) - Info: ${dbimage.name}");
     return jsonResponse(req, HttpStatus.ok, makeInfoMap(dbimage, fileName));
   }
 }
@@ -155,7 +158,7 @@ Map<String, dynamic> makeInfoMap(ss.DatabaseImage dbimage, String fileName) {
 
 void handleIndex(HttpRequest req) {
   req.response
-    ..write("Pong")
+    ..write("Pong") //TODO Add index
     ..close();
 }
 
@@ -169,6 +172,7 @@ void jsonResponse(HttpRequest req, int status, Map<String, dynamic> map) {
 }
 
 void errorResponse(HttpRequest req, int status, String error) {
+  print("Request (${req.connectionInfo.remoteAddress.address}) - Error: $error");
   jsonResponse(req, status, {"error": error});
 }
 
