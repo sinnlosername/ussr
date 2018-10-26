@@ -23,7 +23,7 @@ void onRequest(HttpRequest req) async {
   }
 
   if (req.uri.path == "/index") return handleIndex(req);
-  if (req.uri.path == "/upload") return handleUpload(req);
+  if (req.uri.path == "/feed") return handleUpload(req);
 
   var uripath = req.uri.path;
 
@@ -165,11 +165,11 @@ void handleIndex(HttpRequest req) {
     "name": "USSR",
     "fullName": "Universal Screenshot Share Router",
     "author": "Florian",
-    "message": "Welcome! You can view images at /<name> and upload images at /upload (requires a valid key)",
+    "message": "Welcome! You can view images at /<name> and upload images at /feed (requires a valid key)",
     "disclaimer": "Every user is responsible for their uploaded pictures",
     "api": {
-      "/upload": {
-        "description": "Upload an image",
+      "/feed": {
+        "description": "Feed the server with an image",
         "method": "POST",
         "required_headers": {
           "USSR-Key": {
