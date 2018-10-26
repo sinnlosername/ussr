@@ -52,7 +52,7 @@ File findNextFile() {
 }
 
 class DatabaseImage {
-  String name, owner, uploader;
+  String name, owner, processor;
   BsonBinary key;
   DateTime creationDate, deletionDate;
   int size;
@@ -69,7 +69,7 @@ class DatabaseImage {
       ..creationDate = map["creationDate"]
       ..deletionDate = map["deleteDate"]
       ..size = map["size"]
-      ..uploader = map["uploader"];
+      ..processor = map["processor"];
   }
 
   Map<String, dynamic> toMap() {
@@ -80,7 +80,7 @@ class DatabaseImage {
       "creationDate": creationDate,
       "deletionDate": deletionDate,
       "size": size,
-      "uploader": uploader
+      "processor": processor
     };
   }
 

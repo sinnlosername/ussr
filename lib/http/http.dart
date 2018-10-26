@@ -103,7 +103,7 @@ void handleUpload(HttpRequest req) async {
 
   dbimage.name = name;
   dbimage.owner = user.name;
-  dbimage.uploader = processorName;
+  dbimage.processor = processorName;
   dbimage.key = new BsonBinary.from(nextBytes(16));
   dbimage.creationDate = DateTime.now().toUtc();
   dbimage.size = data.length;
@@ -150,7 +150,7 @@ Map<String, dynamic> makeInfoMap(ss.DatabaseImage dbimage, String fileName) {
     "size": dbimage.size,
     "sizeKb": "${dbimage.size / 1000} KB",
     "key": HEX.encode(dbimage.key.byteList),
-    "uploader": dbimage.uploader,
+    "uploader": dbimage.processor,
     "creationDate": dateFormat.format(dbimage.creationDate.toLocal()),
     "deletionDate": dbimage.deletionDate == null ? null : dateFormat.format(dbimage.deletionDate.toLocal()),
   };
