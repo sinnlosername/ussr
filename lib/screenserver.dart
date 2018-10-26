@@ -2,11 +2,11 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import "config.dart";
 import 'package:mongo_dart/mongo_dart.dart';
 import "package:screenserver/http/http.dart";
+
+import "config.dart";
 import "util.dart" as util;
-import "cli.dart" as cli;
 
 final JsonEncoder jsonEncoder = new JsonEncoder.withIndent('  ');
 
@@ -17,7 +17,8 @@ void start(bool iscli) async {
   config = ScreenConfig();
   db = new Db(config.mongoUrl);
 
-  Directory.current = config.workDir;
+  if (config.workDir != "")
+    Directory.current = config.workDir;
 
   await db.open().catchError((e) {
     print("Unable to establish a database connection");
@@ -27,7 +28,6 @@ void start(bool iscli) async {
 
   if (iscli) {
     print("cli online");
-    cli.start();
     return;
   }
 

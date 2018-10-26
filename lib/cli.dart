@@ -1,23 +1,12 @@
-import 'dart:convert';
 import 'dart:io';
 
-import 'screenserver.dart' as ss;
-import 'util.dart' as util;
-import 'http/http.dart' as http;
 import 'package:mongo_dart/mongo_dart.dart';
 
-void start() async {
-  while (true) {
-    try {
-      var line = stdin.readLineSync();
-      await _onData(line);
-    } catch (e) {
-      await _onError(e);
-    }
-  }
-}
+import 'http/http.dart' as http;
+import 'screenserver.dart' as ss;
+import 'util.dart' as util;
 
-void _onData(String line) async {
+void executeCli(String line) async {
   var args = (line = line.toLowerCase()).split(" ");
 
   if (["stop", "quit", "exit", "q"].contains(line))
@@ -52,15 +41,8 @@ void _onData(String line) async {
 
   if (line.startsWith("info") && args.length > 1) {
     var image = await ss.DatabaseImage.load("name", args[1]);
-
-
     return print(ss.jsonEncoder.convert(http.makeInfoMap(image, image.name + ".png")));
   }
 
   print("Unkown command");
-}
-
-void _onError(var obj) {
-  print("Cli error");
-  print(obj);
 }

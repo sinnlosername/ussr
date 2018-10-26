@@ -26,7 +26,8 @@ class ScreenConfig extends Configuration {
   String host = "127.0.0.1";
   int port = 8075;
 
-  String workDir = "/my/file/home";
+  @optionalConfiguration
+  String workDir = "";
 
   @optionalConfiguration
   String dataDir = "data"; //Subdirectory of homeDir
