@@ -24,8 +24,6 @@ void onRequest(HttpRequest req) async {
 }
 
 void _onRequest(HttpRequest req) async {
-  print("Request (${getRealIP(req)}): ${req.uri.path}");
-
   if (req.uri.path == "/" || req.uri.path == "") {
     req.response
       ..redirect(Uri.parse("/index"), status: HttpStatus.movedTemporarily)
@@ -33,8 +31,16 @@ void _onRequest(HttpRequest req) async {
     return;
   }
 
-  if (req.uri.path == "/index") return handleIndex(req);
-  if (req.uri.path == "/feed") return handleUpload(req);
+  print("Request (${logTime()} ${getRealIP(req)}): ${req.uri.path}");
+
+  if (req.uri.path == "/index")
+    return handleIndex(req);
+
+  if (req.uri.path == "/favicon.ico")
+    return jsonResponse(req, HttpStatus.notFound, {"error": "No favicon"}, true);
+
+  if (req.uri.path == "/feed")
+    return handleUpload(req);
 
   var uripath = req.uri.path;
 
@@ -68,7 +74,7 @@ void _onRequest(HttpRequest req) async {
       req.response.headers.set("Content-Type", "image/png");
       await file.openRead().pipe(req.response);
       req.response.close();
-      return print("Request (${getRealIP(req)}) - View: $origName");
+      return print("Request (${logTime()} ${getRealIP(req)}) - View: $origName");
     }
 
     return await handleAction(action, req, name, file, true);
@@ -122,7 +128,7 @@ void handleUpload(HttpRequest req) async {
   dbimage.size = data.length;
   dbimage.save(true);
 
-  print("Request (${getRealIP(req)}) - User '${user.name}' uploaded '$name' (${data.length}B) using '$processorName'");
+  print("Request (${logTime()} ${getRealIP(req)}) - User '${user.name}' uploaded '$name' (${data.length}B) using '$processorName'");
   return jsonResponse(req, HttpStatus.ok, makeInfoMap(dbimage, file.path.split("/").last));
 }
 
@@ -145,12 +151,12 @@ void handleAction(RequestAction action, HttpRequest req, String fileName, File f
       ..deletionDate = DateTime.now().toUtc()
       ..save(false);
 
-    print("Request (${getRealIP(req)}) - Deleted: ${dbimage.name}");
+    print("Request (${logTime()} ${getRealIP(req)}) - Deleted: ${dbimage.name}");
     return jsonResponse(req, HttpStatus.ok, {"info": "Picture with id ${dbimage.name} was deleted"});
   }
 
   if (action == RequestAction.INFO) {
-    print("Request (${getRealIP(req)}) - Info: ${dbimage.name}");
+    print("Request (${logTime()} ${getRealIP(req)}) - Info: ${dbimage.name}");
     return jsonResponse(req, HttpStatus.ok, makeInfoMap(dbimage, fileName));
   }
 }
@@ -243,19 +249,20 @@ void handleIndex(HttpRequest req) {
         }
       }
     }
-  });
+  }, true);
 }
 
-void jsonResponse(HttpRequest req, int status, Map<String, dynamic> map) {
+void jsonResponse(HttpRequest req, int status, Map<String, dynamic> map, [cache = false]) {
   req.response
     ..statusCode = status
     ..headers.set("Content-Type", "application/json")
+    ..headers.set("Cache-Control", "no-store")
     ..write(ss.jsonEncoder.convert(map))
     ..flush().whenComplete(() => req.response.close());
 }
 
 void errorResponse(HttpRequest req, int status, String error) {
-  print("Request (${getRealIP(req)}) - Error: $error");
+  print("Request (${logTime()} ${getRealIP(req)}) - Error: $error");
   jsonResponse(req, status, {"error": error});
 }
 

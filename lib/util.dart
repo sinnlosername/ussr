@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:hex/hex.dart';
+import 'package:intl/intl.dart';
 
+final logTimeFormat = new DateFormat('[dd.MM HH:mm:ss]');
 final String chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
 final List<int> pngMagicNumber = HEX.decode("89504e470d0a1a0a");
 final Random random = Random.secure();
@@ -41,4 +43,8 @@ Future<List<T>> streamToList<T>(Stream<T> stream) async {
 bool isPNGSimple(List<int> data) {
   if (data.length < pngMagicNumber.length) return false;
   return listEquals(data.sublist(0, pngMagicNumber.length), pngMagicNumber);
+}
+
+String logTime() {
+  return logTimeFormat.format(DateTime.now());
 }
