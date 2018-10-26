@@ -52,8 +52,8 @@ void _onData(String line) async {
   if (line.startsWith("info") && args.length > 1) {
     var image = await ss.DatabaseImage.load("name", args[1]);
 
-    JsonEncoder encoder = new JsonEncoder.withIndent('  ');
-    return print(encoder.convert(http.makeInfoMap(image, image.name + ".png")));
+
+    return print(ss.jsonEncoder.convert(http.makeInfoMap(image, image.name + ".png")));
   }
 
   print("Unkown command");

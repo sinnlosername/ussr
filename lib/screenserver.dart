@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import "config.dart";
@@ -6,6 +7,8 @@ import 'package:mongo_dart/mongo_dart.dart';
 import "package:screenserver/http/http.dart";
 import "util.dart" as util;
 import "cli.dart" as cli;
+
+final JsonEncoder jsonEncoder = new JsonEncoder.withIndent('  ');
 
 ScreenConfig config;
 Db db;

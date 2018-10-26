@@ -15,7 +15,7 @@ final dateFormat = new DateFormat('dd.MM.yyyy HH:mm:ss');
 void onRequest(HttpRequest req) async {
   print("Request (${req.connectionInfo.remoteAddress.address}): ${req.uri.path}"); //TODO Real IP
 
-  if (req.uri.path == "") {
+  if (req.uri.path == "/" || req.uri.path == "") {
     req.response
       ..redirect(Uri.parse("/index"), status: HttpStatus.movedTemporarily)
       ..close();
@@ -94,7 +94,10 @@ void handleUpload(HttpRequest req) async {
   if (!isPNGSimple(data)) return errorResponse(req, HttpStatus.badRequest, "Image must be a png file");
 
   var file = ss.findNextFile();
-  var name = file.path.substring(0, file.path.length - 4).split("/").last;
+  var name = file.path
+      .substring(0, file.path.length - 4)
+      .split("/")
+      .last;
   var dbimage = ss.DatabaseImage();
 
   if (name.contains("/") || name.contains("\\")) throw new Exception("path err critical");
@@ -124,7 +127,8 @@ void handleAction(RequestAction action, HttpRequest req, String fileName, File f
 
   if (exists && dbimage == null && action == RequestAction.INFO)
     return errorResponse(req, HttpStatus.notFound, "No information available");
-  else if (dbimage == null) return errorResponse(req, HttpStatus.notFound, "File not found");
+  else if (dbimage == null)
+    return errorResponse(req, HttpStatus.notFound, "File not found");
 
   if (action == RequestAction.DELETE) {
     file.deleteSync();
@@ -157,16 +161,75 @@ Map<String, dynamic> makeInfoMap(ss.DatabaseImage dbimage, String fileName) {
 }
 
 void handleIndex(HttpRequest req) {
-  req.response
-    ..write("Pong") //TODO Add index
-    ..close();
+  return jsonResponse(req, HttpStatus.ok, {
+    "name": "USSR",
+    "fullName": "Universal Screenshot Share Router",
+    "author": "Florian",
+    "message": "Welcome! You can view images at /<name> and upload images at /upload (requires a valid key)",
+    "disclaimer": "Every user is responsible for their uploaded pictures",
+    "api": {
+      "/upload": {
+        "description": "Upload an image",
+        "method": "POST",
+        "required_headers": {
+          "USSR-Key": {
+            "description": "A valid api key",
+            "format": "hex (32 chars)"
+          },
+          "USSR-Processor": {
+            "description": "The processor which should be used for the body",
+            "values": ["sharex"]
+          }
+        },
+        "body": "Must contain a format which is handleable by the selected processor"
+      },
+      "/<name>": {
+        "method": "GET",
+        "description": "View an image",
+        "parameters": {
+          "name": {
+            "description": "Name of the image",
+            "format": "alphanumeric"
+          }
+        }
+      },
+      "/+<name>/<key>": {
+        "method": "GET",
+        "description": "Get metadata of the image",
+        "parameters": {
+          "name": {
+            "description": "Name of the image",
+            "format": "alphanumeric"
+          },
+          "key": {
+            "description": "A valid image authorization key",
+            "format": "hex (32 chars)"
+          }
+        }
+      },
+      "/-<name>/<key>": {
+        "method": "GET",
+        "description": "Delete an image",
+        "parameters": {
+          "name": {
+            "description": "Name of the image",
+            "format": "alphanumeric"
+          },
+          "key": {
+            "description": "A valid image authorization key",
+            "format": "hex (32 chars)"
+          }
+        }
+      }
+    }
+  });
 }
 
 void jsonResponse(HttpRequest req, int status, Map<String, dynamic> map) {
   req.response
     ..statusCode = status
     ..headers.set("Content-Type", "application/json")
-    ..write(jsonEncode(map))
+    ..write(ss.jsonEncoder.convert(map))
     ..close();
   jsonEncode(map);
 }
