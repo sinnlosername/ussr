@@ -7,7 +7,6 @@ final String chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456
 final List<int> pngMagicNumber = HEX.decode("89504e470d0a1a0a");
 final Random random = Random.secure();
 
-
 List<int> nextBytes(int len) {
   var data = <int>[];
 

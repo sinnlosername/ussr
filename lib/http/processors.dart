@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:mime/mime.dart';
-import '../util.dart' as util;
 
 abstract class UploadProcessor {
   static Map<String, UploadProcessor> map = {
@@ -21,19 +20,27 @@ class SharexProcessor extends UploadProcessor {
     if (boundary == null)
       return null;
 
-    List<MimeMultipart> parts = await util.streamToList(req.transform(new MimeMultipartTransformer(boundary)));
-    if (parts.isEmpty) return null;
+    final parts = await req.transform(new MimeMultipartTransformer(boundary));
+    final first = await parts.firstWhere((part) => true, orElse: null);
 
-    List<List<int>> files = await util.streamToList(parts.first);
-    if (files.isEmpty) return null;
+    if (first == null)
+      return null;
 
-    return files.first;
+    final data = <int>[];
+
+    first.forEach((streamData) => data.addAll(streamData));
+
+    return data;
   }
 }
 
 class SimpleProcessor extends UploadProcessor {
   @override
   Future<List<int>> extractData(HttpRequest req) async {
-    return await req.first;
+    var data = <int>[];
+
+    await req.forEach((streamData) => data.addAll(streamData));
+
+    return data;
   }
 }

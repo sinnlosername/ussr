@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:hex/hex.dart';
@@ -101,9 +100,11 @@ void handleUpload(HttpRequest req) async {
 
   var data = await processor.extractData(req);
 
-  if (data == null) return errorResponse(req, 422, "Unable to process image");
+  if (data == null)
+    return errorResponse(req, 422, "Unable to process image");
 
-  if (!isPNGSimple(data)) return errorResponse(req, HttpStatus.badRequest, "Image must be a png file");
+  if (!isPNGSimple(data))
+    return errorResponse(req, HttpStatus.badRequest, "Image must be a png file");
 
   var file = ss.findNextFile();
   var name = file.path
@@ -116,17 +117,21 @@ void handleUpload(HttpRequest req) async {
 
   file.writeAsBytes(data);
 
+  var length = await file.length();
+
   dbimage.name = name;
   dbimage.owner = user.name;
   dbimage.processor = processorName;
   dbimage.key = new BsonBinary.from(nextBytes(16));
   dbimage.creationDate = DateTime.now().toUtc();
-  dbimage.size = data.length;
+  dbimage.size = length;
   dbimage.save(true);
 
-  jsonResponse(req, HttpStatus.ok, makeInfoMap(dbimage, file.path.split("/").last));
   print("Request (${getRealIP(req)}) - "
-      "User '${user.name}' uploaded '$name' (${data.length}B) using '$processorName'");
+      "User '${user.name}' uploaded '$name' (${length}B) using '$processorName'");
+  return jsonResponse(req, HttpStatus.ok, makeInfoMap(dbimage, file.path
+      .split("/")
+      .last));
 }
 
 void handleAction(RequestAction action, HttpRequest req, String fileName, File file, bool exists) async {
@@ -175,9 +180,7 @@ Map<String, dynamic> makeInfoMap(ss.DatabaseImage dbimage, String fileName) {
 String getRealIP(HttpRequest req) {
   String ip = req.connectionInfo?.remoteAddress?.address;
 
-  if (ip == null)
-    ip = "unresolveable";
-
+  ip = ip == null ? "unresolvable" : ip;
   ip = req.headers.value("X-Forward-For") != null ? req.headers.value("X-Forward-For") : ip;
   ip = req.headers.value("X-Real-IP") != null ? req.headers.value("X-Real-IP") : ip;
   ip = req.headers.value("CF-Connecting-IP") != null ? req.headers.value("CF-Connecting-IP") : ip;
@@ -190,6 +193,7 @@ void handleIndex(HttpRequest req) {
     "name": "USSR",
     "fullName": "Universal Screenshot Share Router",
     "author": "Florian",
+    "contributers": "Steven (https://github.com/StevenKGER)",
     "message": "Welcome! You can view images at /<name> and upload images at /feed (requires a valid key)",
     "disclaimer": "Every user is responsible for their uploaded pictures",
     "api": {
@@ -255,8 +259,7 @@ void jsonResponse(HttpRequest req, int status, Map<String, dynamic> map) {
     ..statusCode = status
     ..headers.set("Content-Type", "application/json")
     ..write(ss.jsonEncoder.convert(map))
-    ..close();
-  jsonEncode(map);
+    ..flush().whenComplete(() => req.response.close());
 }
 
 void errorResponse(HttpRequest req, int status, String error) {

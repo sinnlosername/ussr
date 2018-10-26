@@ -17,8 +17,7 @@ void start(bool iscli) async {
   config = ScreenConfig();
   db = new Db(config.mongoUrl);
 
-  if (config.workDir != "")
-    Directory.current = config.workDir;
+  if (config.workDir != "") Directory.current = config.workDir;
 
   await db.open().catchError((e) {
     print("Unable to establish a database connection");
