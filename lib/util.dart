@@ -36,7 +36,6 @@ bool listEquals<T>(List<int> a, List<int> b) {
 Future<List<T>> streamToList<T>(Stream<T> stream) async {
   List<T> list = [];
   await stream.forEach((t) => list.add(t));
-
   return list;
 }
 

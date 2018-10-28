@@ -37,14 +37,12 @@ class MultipartFile {
     });
 
     _data = _data.sublist(endIndex);
-    _headers.forEach((a,b ) => print("$a | $b"));
   }
 
 
   List<int> get data => _data;
   String get contentDisposition => _headers["Content-Disposition"];
   String get contentType => _headers["Content-Type"];
-
 }
 
 class MultipartFileParser {
