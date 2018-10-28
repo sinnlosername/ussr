@@ -38,5 +38,24 @@ class ScreenConfig extends Configuration {
   @optionalConfiguration
   int sizeLimit = 1024 * 1024 * 3;
 
+  @optionalConfiguration
   int nameSize = 4;
+
+  @optionalConfiguration
+  bool cloudflare = false;
+
+  @optionalConfiguration
+  String cloudflareMail = "";
+
+  @optionalConfiguration
+  String cloudflareKey = "";
+
+  @optionalConfiguration
+  String cloudflareZone = "";
+
+  @optionalConfiguration
+  String cloudflareCacheEndpoint = "https://api.cloudflare.com/client/v4/zones/:zone:/purge_cache";
+
+  @optionalConfiguration
+  String imageCacheHeader = "public, max-age=15, s-maxage=3600";
 }

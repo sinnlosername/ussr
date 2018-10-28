@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:hex/hex.dart';
@@ -46,4 +48,32 @@ bool isPNGSimple(List<int> data) {
 
 String logTime() {
   return logTimeFormat.format(DateTime.now());
+}
+
+class CloudflareApiCall {
+  String endpoint, key, mail, zone;
+  dynamic body = {};
+
+  Future<Map<String, dynamic>> call() async {
+    endpoint = endpoint.replaceAll(":zone:", zone);
+    
+    final req = await HttpClient().postUrl(Uri.parse(endpoint))
+      ..headers.set("X-Auth-Key", key)
+      ..headers.set("X-Auth-Email", mail)
+      ..write(jsonEncode(body));
+    final resp = await req.close();
+
+    Map<String, dynamic> jsonData;
+
+    await resp
+        .transform(utf8.decoder)
+        .transform(json.decoder)
+        .forEach((obj) => jsonData = (obj == null || !obj is Map<String, dynamic> ? null : obj));
+
+    if (jsonData == null)
+      print("Unable to read Cloudflare response. Status: ${resp.statusCode}");
+
+    return jsonData;
+  }
+
 }

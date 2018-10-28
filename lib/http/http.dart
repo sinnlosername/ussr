@@ -17,7 +17,7 @@ void onRequest(HttpRequest req) async {
   try {
     await _onRequest(req);
   } catch (e, st) {
-    print("Error while handling http request");
+    print("Error while handling http request: ${req.uri.toString()}");
     print(e);
     print(st.toString());
   }
@@ -71,9 +71,13 @@ void _onRequest(HttpRequest req) async {
       return errorResponse(req, HttpStatus.badRequest, "Security violation");
 
     if (action == RequestAction.VIEW) {
-      req.response.headers.set("Content-Type", "image/png");
+      req.response
+        ..headers.set("Content-Type", "image/png")
+        ..headers.set("Cache-Control", ss.config.imageCacheHeader);
+
       await file.openRead().pipe(req.response);
       req.response.close();
+
       return print("Request (${logTime()} ${getRealIP(req)}) - View: $origName");
     }
 
@@ -113,7 +117,10 @@ void handleUpload(HttpRequest req) async {
     return errorResponse(req, HttpStatus.badRequest, "Image must be a png file");
 
   var file = ss.findNextFile();
-  var name = file.path.substring(0, file.path.length - 4).split("/").last;
+  var name = file.path
+      .substring(0, file.path.length - 4)
+      .split("/")
+      .last;
   var dbimage = ss.DatabaseImage();
 
   if (name.contains("/") || name.contains("\\")) throw new Exception("path err critical");
@@ -128,8 +135,11 @@ void handleUpload(HttpRequest req) async {
   dbimage.size = data.length;
   dbimage.save(true);
 
-  print("Request (${logTime()} ${getRealIP(req)}) - User '${user.name}' uploaded '$name' (${data.length}B) using '$processorName'");
-  return jsonResponse(req, HttpStatus.ok, makeInfoMap(dbimage, file.path.split("/").last));
+  print("Request (${logTime()} ${getRealIP(req)}) - User '${user.name}' uploaded '$name' (${data
+      .length}B) using '$processorName'");
+  return jsonResponse(req, HttpStatus.ok, makeInfoMap(dbimage, file.path
+      .split("/")
+      .last));
 }
 
 void handleAction(RequestAction action, HttpRequest req, String fileName, File file, bool exists) async {
@@ -146,10 +156,12 @@ void handleAction(RequestAction action, HttpRequest req, String fileName, File f
     return errorResponse(req, HttpStatus.notFound, "File not found");
 
   if (action == RequestAction.DELETE) {
-    file.deleteSync();
+    file.delete();
     dbimage
       ..deletionDate = DateTime.now().toUtc()
       ..save(false);
+
+    _clearCache(req, dbimage.name);
 
     print("Request (${logTime()} ${getRealIP(req)}) - Deleted: ${dbimage.name}");
     return jsonResponse(req, HttpStatus.ok, {"info": "Picture with id ${dbimage.name} was deleted"});
@@ -159,6 +171,30 @@ void handleAction(RequestAction action, HttpRequest req, String fileName, File f
     print("Request (${logTime()} ${getRealIP(req)}) - Info: ${dbimage.name}");
     return jsonResponse(req, HttpStatus.ok, makeInfoMap(dbimage, fileName));
   }
+}
+
+void _clearCache(HttpRequest req, String name) async {
+  if (!ss.config.cloudflare) return;
+
+  final cfapi = CloudflareApiCall()
+    ..endpoint = ss.config.cloudflareCacheEndpoint
+    ..key = ss.config.cloudflareKey
+    ..mail = ss.config.cloudflareMail
+    ..zone = ss.config.cloudflareZone
+    ..body = [
+      "${req.uri.scheme}://${req.uri.host}/$name",
+      "${req.uri.scheme}://${req.uri.host}/$name.png"
+    ];
+
+  final result = await cfapi.call();
+
+  if (result == null)
+    return;
+
+  if (result["success"] == null || !result["success"])
+    return print("Request (${logTime()} ${getRealIP(req)}) - Purge error, resp: ${ss.jsonEncoder.convert(result)}");
+
+  print("Request (${logTime()} ${getRealIP(req)}) - Cache for $name purged successfully");
 }
 
 Map<String, dynamic> makeInfoMap(ss.DatabaseImage dbimage, String fileName) {
