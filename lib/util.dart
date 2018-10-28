@@ -14,14 +14,16 @@ final Random random = Random.secure();
 List<int> nextBytes(int len) {
   var data = <int>[];
 
-  for (var i = 0; i < len; i++) data.add(random.nextInt(256));
+  for (var i = 0; i < len; i++)
+    data.add(random.nextInt(256));
   return data;
 }
 
 String nextChars(int len) {
   var buffer = new StringBuffer();
 
-  for (var i = 0; i < len; i++) buffer.write(chars[random.nextInt(chars.length)]);
+  for (var i = 0; i < len; i++)
+    buffer.write(chars[random.nextInt(chars.length)]);
   return buffer.toString();
 }
 
@@ -56,22 +58,25 @@ class CloudflareApiCall {
 
   Future<Map<String, dynamic>> call() async {
     endpoint = endpoint.replaceAll(":zone:", zone);
-    
+
     final req = await HttpClient().postUrl(Uri.parse(endpoint))
       ..headers.set("X-Auth-Key", key)
       ..headers.set("X-Auth-Email", mail)
       ..write(jsonEncode(body));
     final resp = await req.close();
 
-    Map<String, dynamic> jsonData;
+    dynamic jsonData;
 
     await resp
         .transform(utf8.decoder)
         .transform(json.decoder)
-        .forEach((obj) => jsonData = (obj == null || !obj is Map<String, dynamic> ? null : obj));
+        .forEach((obj) => jsonData = obj);
 
     if (jsonData == null)
       print("Unable to read Cloudflare response. Status: ${resp.statusCode}");
+
+    if (!(jsonData is Map<String, dynamic>))
+      return null;
 
     return jsonData;
   }

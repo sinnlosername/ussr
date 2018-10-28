@@ -176,15 +176,22 @@ void handleAction(RequestAction action, HttpRequest req, String fileName, File f
 void _clearCache(HttpRequest req, String name) async {
   if (!ss.config.cloudflare) return;
 
+  final files = <String>[];
+
+  ss.config.hosts.forEach((host) {
+    files.add("$host/$name");
+    files.add("$host/$name.png");
+  });
+
   final cfapi = CloudflareApiCall()
     ..endpoint = ss.config.cloudflareCacheEndpoint
     ..key = ss.config.cloudflareKey
     ..mail = ss.config.cloudflareMail
     ..zone = ss.config.cloudflareZone
-    ..body = [
-      "${req.uri.scheme}://${req.uri.host}/$name",
-      "${req.uri.scheme}://${req.uri.host}/$name.png"
-    ];
+    ..body = {"files": files};
+
+  print(req.uri.toString());
+  print(req.headers.host);
 
   final result = await cfapi.call();
 

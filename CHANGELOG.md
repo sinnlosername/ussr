@@ -7,4 +7,6 @@
 - View image informations
 - Delete images
 
+## 1.1.0
 
+- Add cloudflare cache purge

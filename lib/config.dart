@@ -39,6 +39,9 @@ class ScreenConfig extends Configuration {
   int sizeLimit = 1024 * 1024 * 3;
 
   @optionalConfiguration
+  List<String> hosts = [];
+
+  @optionalConfiguration
   int nameSize = 4;
 
   @optionalConfiguration
