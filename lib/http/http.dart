@@ -31,7 +31,7 @@ void _onRequest(HttpRequest req) async {
     return;
   }
 
-  print("Request (${logTime()} ${getRealIP(req)}): ${req.uri.path}");
+  print("Request (${logInfo(req)}): ${req.uri.path}");
 
   if (req.uri.path == "/index")
     return handleIndex(req);
@@ -78,7 +78,7 @@ void _onRequest(HttpRequest req) async {
       await file.openRead().pipe(req.response);
       req.response.close();
 
-      return print("Request (${logTime()} ${getRealIP(req)}) - View: $origName");
+      return print("Request (${logInfo(req)}) - View: $origName");
     }
 
     return await handleAction(action, req, name, file, true);
@@ -135,7 +135,7 @@ void handleUpload(HttpRequest req) async {
   dbimage.size = data.length;
   dbimage.save(true);
 
-  print("Request (${logTime()} ${getRealIP(req)}) - User '${user.name}' uploaded '$name' (${data
+  print("Request (${logInfo(req)}) - User '${user.name}' uploaded '$name' (${data
       .length}B) using '$processorName'");
   return jsonResponse(req, HttpStatus.ok, makeInfoMap(dbimage, file.path
       .split("/")
@@ -163,12 +163,12 @@ void handleAction(RequestAction action, HttpRequest req, String fileName, File f
 
     _clearCache(req, dbimage.name);
 
-    print("Request (${logTime()} ${getRealIP(req)}) - Deleted: ${dbimage.name}");
+    print("Request (${logInfo(req)}) - Deleted: ${dbimage.name}");
     return jsonResponse(req, HttpStatus.ok, {"info": "Picture with id ${dbimage.name} was deleted"});
   }
 
   if (action == RequestAction.INFO) {
-    print("Request (${logTime()} ${getRealIP(req)}) - Info: ${dbimage.name}");
+    print("Request (${logInfo(req)}) - Info: ${dbimage.name}");
     return jsonResponse(req, HttpStatus.ok, makeInfoMap(dbimage, fileName));
   }
 }
@@ -199,9 +199,9 @@ void _clearCache(HttpRequest req, String name) async {
     return;
 
   if (result["success"] == null || !result["success"])
-    return print("Request (${logTime()} ${getRealIP(req)}) - Purge error, resp: ${ss.jsonEncoder.convert(result)}");
+    return print("Request (${logInfo(req)}) - Purge error, resp: ${ss.jsonEncoder.convert(result)}");
 
-  print("Request (${logTime()} ${getRealIP(req)}) - Cache for $name purged successfully");
+  print("Request (${logInfo(req)}) - Cache for $name purged successfully");
 }
 
 Map<String, dynamic> makeInfoMap(ss.DatabaseImage dbimage, String fileName) {
@@ -216,17 +216,6 @@ Map<String, dynamic> makeInfoMap(ss.DatabaseImage dbimage, String fileName) {
     "creationDate": dateFormat.format(dbimage.creationDate.toLocal()),
     "deletionDate": dbimage.deletionDate == null ? null : dateFormat.format(dbimage.deletionDate.toLocal()),
   };
-}
-
-String getRealIP(HttpRequest req) {
-  String ip = req.connectionInfo?.remoteAddress?.address;
-
-  ip = ip == null ? "unresolvable" : ip;
-  ip = req.headers.value("X-Forward-For") != null ? req.headers.value("X-Forward-For") : ip;
-  ip = req.headers.value("X-Real-IP") != null ? req.headers.value("X-Real-IP") : ip;
-  ip = req.headers.value("CF-Connecting-IP") != null ? req.headers.value("CF-Connecting-IP") : ip;
-
-  return ip;
 }
 
 void handleIndex(HttpRequest req) {
@@ -305,7 +294,7 @@ void jsonResponse(HttpRequest req, int status, Map<String, dynamic> map, [cache 
 }
 
 void errorResponse(HttpRequest req, int status, String error) {
-  print("Request (${logTime()} ${getRealIP(req)}) - Error: $error");
+  print("Request (${logInfo(req)}) - Error: $error");
   jsonResponse(req, status, {"error": error});
 }
 
@@ -315,4 +304,24 @@ RequestAction getAction(String s) {
   if (s.startsWith("+")) return RequestAction.INFO;
   if (s.startsWith("-")) return RequestAction.DELETE;
   return RequestAction.VIEW;
+}
+
+String logInfo(HttpRequest req) {
+  return "${logTimeFormat.format(DateTime.now())} ${getRealIP(req)} ${getCountry(req)}";
+}
+
+String getRealIP(HttpRequest req) {
+  String ip = req.connectionInfo?.remoteAddress?.address;
+
+  ip = ip == null ? "unresolvable" : ip;
+  ip = req.headers.value("X-Forward-For") != null ? req.headers.value("X-Forward-For") : ip;
+  ip = req.headers.value("X-Real-IP") != null ? req.headers.value("X-Real-IP") : ip;
+  ip = req.headers.value("CF-Connecting-IP") != null ? req.headers.value("CF-Connecting-IP") : ip;
+
+  return ip;
+}
+
+String getCountry(HttpRequest req) {
+  final countryHeader = req.headers.value("CF-IPCountry");
+  return countryHeader == null ? "" : " $countryHeader";
 }

@@ -48,10 +48,6 @@ bool isPNGSimple(List<int> data) {
   return listEquals(data.sublist(0, pngMagicNumber.length), pngMagicNumber);
 }
 
-String logTime() {
-  return logTimeFormat.format(DateTime.now());
-}
-
 class CloudflareApiCall {
   String endpoint, key, mail, zone;
   dynamic body = {};
