@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:hex/hex.dart';
 import 'package:intl/intl.dart';
+import "package:logger/default_logger.dart" as log;
+import 'package:logger/logger.dart' show Interface;
 import 'package:mongo_dart/mongo_dart.dart';
 import 'package:path/path.dart' as path;
 
@@ -17,9 +19,9 @@ void onRequest(HttpRequest req) async {
   try {
     await _onRequest(req);
   } catch (e, st) {
-    print("Error while handling http request: ${req.uri.toString()}");
-    print(e);
-    print(st.toString());
+    log.error("Error while handling http request: ${req.uri.toString()}");
+    log.error(e);
+    log.error(st.toString());
   }
 }
 
@@ -31,7 +33,13 @@ void _onRequest(HttpRequest req) async {
     return;
   }
 
-  print("Request (${logInfo(req)}): ${req.uri.path}");
+  var logCtx = (log.bind()
+    ..string("path", req.uri.path)
+    ..string("ip", getRealIP(req))
+    ..string("country", getCountry(req))
+  ).build();
+
+  logCtx.info("Incoming request");
 
   if (req.uri.path == "/index")
     return handleIndex(req);
@@ -40,7 +48,7 @@ void _onRequest(HttpRequest req) async {
     return jsonResponse(req, HttpStatus.notFound, {"error": "No favicon"}, true);
 
   if (req.uri.path == "/feed")
-    return handleUpload(req);
+    return handleUpload(req, logCtx);
 
   var uripath = req.uri.path;
 
@@ -53,7 +61,7 @@ void _onRequest(HttpRequest req) async {
       name = name.substring(1);
 
       if (req.uri.pathSegments.length <= 1)
-        return errorResponse(req, HttpStatus.unauthorized, "Action request without key");
+        return errorResponse(req, HttpStatus.unauthorized, "Action request without key", logCtx);
     }
 
     if (!name.endsWith(".png")) name += ".png";
@@ -62,13 +70,13 @@ void _onRequest(HttpRequest req) async {
     final File file = new File("${dataDir.path}/${name}");
 
     if (!file.existsSync()) {
-      if (action == RequestAction.INFO) return await handleAction(action, req, null, null, false);
+      if (action == RequestAction.INFO) return await handleAction(action, req, null, null, false, logCtx);
 
-      return errorResponse(req, HttpStatus.notFound, "File not found");
+      return errorResponse(req, HttpStatus.notFound, "File not found", logCtx);
     }
 
     if (!path.isWithin(dataDir.absolute.path, file.absolute.path))
-      return errorResponse(req, HttpStatus.badRequest, "Security violation");
+      return errorResponse(req, HttpStatus.badRequest, "Security violation", logCtx);
 
     if (action == RequestAction.VIEW) {
       req.response
@@ -78,43 +86,44 @@ void _onRequest(HttpRequest req) async {
       await file.openRead().pipe(req.response);
       req.response.close();
 
-      return print("Request (${logInfo(req)}) - View: $origName");
+
+      return logCtx.info("View $origName");
     }
 
-    return await handleAction(action, req, name, file, true);
+    return await handleAction(action, req, name, file, true, logCtx);
   }
 
-  errorResponse(req, HttpStatus.notFound, "Unhandleable");
+  errorResponse(req, HttpStatus.notFound, "Unhandleable", logCtx);
 }
 
-void handleUpload(HttpRequest req) async {
+void handleUpload(HttpRequest req, Interface logCtx) async {
   if (req.method != "POST")
-    return errorResponse(req, HttpStatus.methodNotAllowed, "This route only accepts POST requests");
+    return errorResponse(req, HttpStatus.methodNotAllowed, "This route only accepts POST requests", logCtx);
 
   if (req.headers.contentLength > ss.config.sizeLimit)
-    return errorResponse(req, HttpStatus.badRequest, "Payload too big");
+    return errorResponse(req, HttpStatus.badRequest, "Payload too big", logCtx);
 
   var keyStr = req.headers.value("USSR-Key");
   if (keyStr == null || !keyRegex.hasMatch(keyStr))
-    return errorResponse(req, HttpStatus.unauthorized, "Invalid or no key provided");
+    return errorResponse(req, HttpStatus.unauthorized, "Invalid or no key provided", logCtx);
 
   var user = await ss.DatabaseUser.load("key", new BsonBinary.from(HEX.decode(keyStr)));
-  if (user == null) return errorResponse(req, HttpStatus.forbidden, "Invalid key");
+  if (user == null) return errorResponse(req, HttpStatus.forbidden, "Invalid key", logCtx);
 
-  if (user.banned) return errorResponse(req, HttpStatus.forbidden, "Your account is banned");
+  if (user.banned) return errorResponse(req, HttpStatus.forbidden, "Your account is banned", logCtx);
 
   var processorName = req.headers.value("USSR-Processor");
   var processor = UploadProcessor.map[processorName];
 
-  if (processor == null) return errorResponse(req, HttpStatus.badRequest, "Processor not found");
+  if (processor == null) return errorResponse(req, HttpStatus.badRequest, "Processor not found", logCtx);
 
   var data = await processor.extractData(req);
 
   if (data == null)
-    return errorResponse(req, 422, "Unable to process image");
+    return errorResponse(req, 422, "Unable to process image", logCtx);
 
   if (!isPNGSimple(data))
-    return errorResponse(req, HttpStatus.badRequest, "Image must be a png file");
+    return errorResponse(req, HttpStatus.badRequest, "Image must be a png file", logCtx);
 
   var file = ss.findNextFile();
   var name = file.path
@@ -135,25 +144,22 @@ void handleUpload(HttpRequest req) async {
   dbimage.size = data.length;
   dbimage.save(true);
 
-  print("Request (${logInfo(req)}) - User '${user.name}' uploaded '$name' (${data
-      .length}B) using '$processorName'");
-  return jsonResponse(req, HttpStatus.ok, makeInfoMap(dbimage, file.path
-      .split("/")
-      .last));
+  logCtx.info("User ${user.name} uploaded $name (${data.length}B) using $processorName");
+  return jsonResponse(req, HttpStatus.ok, makeInfoMap(dbimage, file.path.split("/").last));
 }
 
-void handleAction(RequestAction action, HttpRequest req, String fileName, File file, bool exists) async {
-  if (req.uri.pathSegments.length != 2) return errorResponse(req, HttpStatus.notFound, "File not found");
+void handleAction(RequestAction action, HttpRequest req, String fileName, File file, bool exists, Interface logCtx) async {
+  if (req.uri.pathSegments.length != 2) return errorResponse(req, HttpStatus.notFound, "File not found", logCtx);
 
   var binkey = new BsonBinary.from(HEX.decode(req.uri.pathSegments[1]));
   var dbimage = await ss.DatabaseImage.load("key", binkey);
 
-  if (dbimage.name + ".png" != fileName) return errorResponse(req, HttpStatus.forbidden, "Invalid key");
+  if (dbimage.name + ".png" != fileName) return errorResponse(req, HttpStatus.forbidden, "Invalid key", logCtx);
 
   if (exists && dbimage == null && action == RequestAction.INFO)
-    return errorResponse(req, HttpStatus.notFound, "No information available");
+    return errorResponse(req, HttpStatus.notFound, "No information available", logCtx);
   else if (dbimage == null)
-    return errorResponse(req, HttpStatus.notFound, "File not found");
+    return errorResponse(req, HttpStatus.notFound, "File not found", logCtx);
 
   if (action == RequestAction.DELETE) {
     file.delete();
@@ -161,19 +167,19 @@ void handleAction(RequestAction action, HttpRequest req, String fileName, File f
       ..deletionDate = DateTime.now().toUtc()
       ..save(false);
 
-    _clearCache(req, dbimage.name);
+    _clearCache(req, dbimage.name, logCtx);
 
-    print("Request (${logInfo(req)}) - Deleted: ${dbimage.name}");
+    logCtx.info("Deleted ${dbimage.name}");
     return jsonResponse(req, HttpStatus.ok, {"info": "Picture with id ${dbimage.name} was deleted"});
   }
 
   if (action == RequestAction.INFO) {
-    print("Request (${logInfo(req)}) - Info: ${dbimage.name}");
+    logCtx.info("Requested info of ${dbimage.name}");
     return jsonResponse(req, HttpStatus.ok, makeInfoMap(dbimage, fileName));
   }
 }
 
-void _clearCache(HttpRequest req, String name) async {
+void _clearCache(HttpRequest req, String name, Interface logCtx) async {
   if (!ss.config.cloudflare) return;
 
   final files = <String>[];
@@ -190,18 +196,15 @@ void _clearCache(HttpRequest req, String name) async {
     ..zone = ss.config.cloudflareZone
     ..body = {"files": files};
 
-  print(req.uri.toString());
-  print(req.headers.host);
-
   final result = await cfapi.call();
 
   if (result == null)
     return;
 
   if (result["success"] == null || !result["success"])
-    return print("Request (${logInfo(req)}) - Purge error, resp: ${ss.jsonEncoder.convert(result)}");
+    return logCtx.warning("Purge error, resp: ${ss.jsonEncoder.convert(result)}");
 
-  print("Request (${logInfo(req)}) - Cache for $name purged successfully");
+  logCtx.info("Cace for $name purged successfully");
 }
 
 Map<String, dynamic> makeInfoMap(ss.DatabaseImage dbimage, String fileName) {
@@ -293,8 +296,8 @@ void jsonResponse(HttpRequest req, int status, Map<String, dynamic> map, [cache 
     ..flush().whenComplete(() => req.response.close());
 }
 
-void errorResponse(HttpRequest req, int status, String error) {
-  print("Request (${logInfo(req)}) - Error: $error");
+void errorResponse(HttpRequest req, int status, String error, Interface logCtx) {
+  logCtx.info("Returning error: $error");
   jsonResponse(req, status, {"error": error});
 }
 
@@ -304,10 +307,6 @@ RequestAction getAction(String s) {
   if (s.startsWith("+")) return RequestAction.INFO;
   if (s.startsWith("-")) return RequestAction.DELETE;
   return RequestAction.VIEW;
-}
-
-String logInfo(HttpRequest req) {
-  return "${logTimeFormat.format(DateTime.now())} ${getRealIP(req)} ${getCountry(req)}";
 }
 
 String getRealIP(HttpRequest req) {

@@ -5,6 +5,9 @@ import 'dart:math';
 
 import 'package:hex/hex.dart';
 import 'package:intl/intl.dart';
+import "package:logger/default_logger.dart" as log;
+import 'package:logger/formatters.dart';
+import 'package:logger/logger.dart';
 
 final logTimeFormat = new DateFormat('[dd.MM HH:mm:ss]');
 final String chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
@@ -69,7 +72,7 @@ class CloudflareApiCall {
         .forEach((obj) => jsonData = obj);
 
     if (jsonData == null)
-      print("Unable to read Cloudflare response. Status: ${resp.statusCode}");
+      log.warning("Unable to read Cloudflare response. Status: ${resp.statusCode}");
 
     if (!(jsonData is Map<String, dynamic>))
       return null;
@@ -77,4 +80,47 @@ class CloudflareApiCall {
     return jsonData;
   }
 
+}
+
+
+class ConsoleHandler extends Handler {
+  Formatter _formatter;
+
+  ConsoleHandler(this._formatter);
+
+  @override
+  void call(Record record) {
+    print(_formatter.call(record));
+  }
+}
+
+class FileHandler extends Handler {
+  Formatter _formatter;
+  IOSink _sink;
+
+  FileHandler(this._formatter, String file) {
+    _sink = new File(file).openWrite(mode: FileMode.append);
+  }
+
+  @override
+  void call(Record record) {
+    _sink.writeln(_formatter.call(record));
+  }
+
+  @override
+  Future<void> close() async {
+    await super.close();
+    await _sink.flush();
+    await _sink.close();
+  }
+}
+
+class CustomFormatter extends Formatter {
+  DateFormat dateFormat = new DateFormat("yy.MM.dd HH:mm:ss");
+
+  @override
+  String call(Record record) {
+    var fields = record.fields != null ? record.fields.map((f) => "${f.key}:'${f.value}'").join("  ") : "";
+    return "[${dateFormat.format(record.time)} ${record.level.name.toUpperCase()}] ${record.message}  $fields";
+  }
 }

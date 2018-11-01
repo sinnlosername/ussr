@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import "package:logger/default_logger.dart" as log;
 import 'package:mongo_dart/mongo_dart.dart';
 
 import "config.dart";
@@ -14,31 +15,36 @@ ScreenConfig config;
 Db db;
 
 void start(bool iscli) async {
+  _initLogger();
   config = ScreenConfig();
   db = new Db(config.mongoUrl);
 
   if (config.workDir != "") Directory.current = config.workDir;
 
   await db.open().catchError((e) {
-    print("Unable to establish a database connection");
-    print(e);
-    exit(1);
+    log.error("Unable to establish a database connection");
+    log.fatal(e);
   });
 
   if (iscli) {
-    print("cli online");
+    log.info("cli online");
     return;
   }
 
   HttpServer.bind(config.host, config.port).then((server) {
     server.listen(onRequest);
   }, onError: (e) {
-    print("Unable to start http server");
-    print(e);
-    exit(1);
+    log.error("Unable to start http server");
+    log.fatal(e);
   });
 
-  print("Ready");
+  log.info("Ready");
+}
+
+void _initLogger() {
+  var formatter = util.CustomFormatter();
+  log.addHandler(util.ConsoleHandler(formatter));
+  log.addHandler(util.FileHandler(formatter, "ussr.log"));
 }
 
 File findNextFile() {

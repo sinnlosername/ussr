@@ -1,6 +1,8 @@
 import 'dart:io';
 
+import "package:logger/default_logger.dart" as log;
 import 'package:safe_config/safe_config.dart';
+
 
 class ScreenConfig extends Configuration {
   factory ScreenConfig() {
@@ -8,15 +10,14 @@ class ScreenConfig extends Configuration {
 
     if (!file.existsSync()) {
       file.createSync();
-      print("Config file created, please configure it and restart the server");
+      log.info("Config file created, please configure it and restart the server");
       exit(0);
     }
 
     try {
       return ScreenConfig._internal(file);
     } catch (e) {
-      print("Unable to read config.yml");
-      exit(1);
+      log.fatal("Unable to read config.yml");
       throw e; //Need to return/throw something
     }
   }
