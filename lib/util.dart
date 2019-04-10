@@ -22,6 +22,7 @@ List<int> nextBytes(int len) {
   return data;
 }
 
+
 String nextChars(int len) {
   var buffer = new StringBuffer();
 
@@ -49,6 +50,17 @@ Future<List<T>> streamToList<T>(Stream<T> stream) async {
 bool isPNGSimple(List<int> data) {
   if (data.length < pngMagicNumber.length) return false;
   return listEquals(data.sublist(0, pngMagicNumber.length), pngMagicNumber);
+}
+
+void optimizePNG(String optimizerPath, String file, logCtx) {
+  if (optimizerPath == null || optimizerPath.isEmpty) return;
+
+  try {
+    Process.runSync(optimizerPath, ["-o1", "-q", file]);
+    logCtx.info("Successfully optimazed PNG using oxipng");
+  } catch (ex) {
+    logCtx.info("Unable to optimize PNG using oxipng");
+  }
 }
 
 class CloudflareApiCall {
@@ -81,7 +93,6 @@ class CloudflareApiCall {
   }
 
 }
-
 
 class ConsoleHandler extends Handler {
   Formatter _formatter;

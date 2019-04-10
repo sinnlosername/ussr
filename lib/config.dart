@@ -62,4 +62,7 @@ class ScreenConfig extends Configuration {
 
   @optionalConfiguration
   String imageCacheHeader = "public, max-age=15, s-maxage=3600";
+
+  @optionalConfiguration
+  String optiPngPath;
 }

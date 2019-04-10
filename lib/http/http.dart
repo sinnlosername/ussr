@@ -134,17 +134,22 @@ void handleUpload(HttpRequest req, Interface logCtx) async {
 
   if (name.contains("/") || name.contains("\\")) throw new Exception("path err critical");
 
-  file.writeAsBytes(data);
+  file.writeAsBytesSync(data);
+
+  optimizePNG(ss.config.optiPngPath, file.absolute.path, logCtx);
 
   dbimage.name = name;
   dbimage.owner = user.name;
   dbimage.processor = processorName;
   dbimage.key = new BsonBinary.from(nextBytes(16));
   dbimage.creationDate = DateTime.now().toUtc();
-  dbimage.size = data.length;
+  dbimage.size = file.lengthSync();
   dbimage.save(true);
 
-  logCtx.info("User ${user.name} uploaded $name (${data.length}B) using $processorName");
+  var saved = (data.length - dbimage.size);
+  var savedPerc = (saved * 100 / data.length).round();
+
+  logCtx.info("User ${user.name} uploaded $name (${data.length}B, compressed $savedPerc%) using $processorName");
   return jsonResponse(req, HttpStatus.ok, makeInfoMap(dbimage, file.path.split("/").last));
 }
 
